@@ -12,6 +12,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { AssetTable } from '@/components/AssetTable';
 import { AssetModal } from '@/components/AssetModal';
+import { AssetDetailModal } from '@/components/AssetDetailModal';
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState<any[]>([]);
@@ -19,7 +20,9 @@ export default function AssetsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<any>(null);
+  const [viewingAsset, setViewingAsset] = useState<any>(null);
 
   const fetchAssets = async () => {
     setLoading(true);
@@ -221,7 +224,22 @@ export default function AssetsPage() {
             setEditingAsset(asset);
             setIsModalOpen(true);
           }}
+          onView={(asset) => {
+            setViewingAsset(asset);
+            setIsDetailModalOpen(true);
+          }}
           onDelete={handleDelete}
+        />
+      )}
+
+      {/* Detail Modal */}
+      {isDetailModalOpen && viewingAsset && (
+        <AssetDetailModal 
+          asset={viewingAsset}
+          onClose={() => {
+            setIsDetailModalOpen(false);
+            setViewingAsset(null);
+          }}
         />
       )}
 

@@ -4,6 +4,7 @@ import React from 'react';
 import { 
   Edit2, 
   Trash2, 
+  Eye,
   MoreVertical,
   Monitor,
   Laptop,
@@ -18,6 +19,7 @@ import { cn } from '@/lib/utils';
 interface AssetTableProps {
   assets: any[];
   onEdit: (asset: any) => void;
+  onView: (asset: any) => void;
   onDelete: (id: string) => void;
 }
 
@@ -44,7 +46,7 @@ const getStatusStyles = (status: string) => {
   }
 };
 
-export function AssetTable({ assets, onEdit, onDelete }: AssetTableProps) {
+export function AssetTable({ assets, onEdit, onView, onDelete }: AssetTableProps) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
       <div className="overflow-x-auto">
@@ -114,6 +116,13 @@ export function AssetTable({ assets, onEdit, onDelete }: AssetTableProps) {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => onView(asset)}
+                          className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-blue-400 transition-all"
+                          title="View Details"
+                        >
+                          <Eye size={16} />
+                        </button>
                         <button 
                           onClick={() => onEdit(asset)}
                           className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-emerald-400 transition-all"

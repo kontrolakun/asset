@@ -3,8 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { 
   X, 
-  Download, 
-  Printer, 
   History as HistoryIcon, 
   Calendar, 
   Tag, 
@@ -13,9 +11,8 @@ import {
   Info, 
   Layers,
   Loader2,
-  ExternalLink
+  Building2
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '@/lib/supabase';
 import { formatDistanceToNow, format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -52,31 +49,6 @@ export function AssetDetailModal({ asset, onClose }: AssetDetailModalProps) {
     fetchHistory();
   }, [asset?.id]);
 
-  const downloadQRCode = () => {
-    const svg = document.getElementById('asset-qr-code');
-    if (!svg) return;
-    
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx?.drawImage(img, 0, 0);
-      const pngFile = canvas.toDataURL('image/png');
-      const downloadLink = document.createElement('a');
-      downloadLink.download = `QR_${asset.serial_number}.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
-    };
-    
-    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
-  };
-
-  const qrValue = `${window.location.origin}/assets?search=${asset.serial_number}`;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm">
       <div className="bg-zinc-900 border border-zinc-800 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -102,13 +74,14 @@ export function AssetDetailModal({ asset, onClose }: AssetDetailModalProps) {
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-8 space-y-10">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-            {/* Left: Basic Info */}
+            {/* Basic Info */}
             <div className="lg:col-span-2 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InfoItem icon={Tag} label="Asset Name" value={asset.asset_name} />
-                <InfoItem icon={Layers} label="Category" value={asset.category} />
+                <InfoItem icon={Layers} label="Category" value={asset.categories?.name || asset.category || 'N/A'} />
                 <InfoItem icon={Hash} label="Serial Number" value={asset.serial_number} isMono />
                 <InfoItem icon={User} label="Assigned To" value={asset.assigned_to || 'Unassigned'} />
+                <InfoItem icon={Building2} label="Department" value={asset.departments?.name || 'N/A'} />
                 <InfoItem icon={Calendar} label="Purchase Date" value={asset.purchase_date ? format(new Date(asset.purchase_date), 'PPP') : 'N/A'} />
                 <div className="space-y-1.5">
                   <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
@@ -137,35 +110,21 @@ export function AssetDetailModal({ asset, onClose }: AssetDetailModalProps) {
               </div>
             </div>
 
-            {/* Right: QR Code Section */}
-            <div className="flex flex-col items-center justify-start space-y-6 p-6 bg-zinc-800/30 border border-zinc-800 rounded-3xl">
-              <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Asset QR Identity</p>
-              <div className="p-4 bg-white rounded-2xl shadow-inner">
-                <QRCodeSVG 
-                  id="asset-qr-code"
-                  value={qrValue} 
-                  size={160}
-                  level="H"
-                  includeMargin={false}
-                />
-              </div>
-              <div className="flex flex-col w-full gap-2">
-                <button 
-                  onClick={downloadQRCode}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl text-sm font-semibold border border-zinc-700 transition-all"
-                >
-                  <Download size={16} /> Download QR
-                </button>
-                <button 
-                  onClick={() => window.print()}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 rounded-xl text-sm font-semibold border border-zinc-700 transition-all"
-                >
-                  <Printer size={16} /> Print Label
-                </button>
-              </div>
-              <p className="text-[10px] text-zinc-500 text-center leading-tight">
-                Scan to view asset details in the management portal.
-              </p>
+            {/* Specific Details (JSONB) */}
+            <div className="space-y-6 p-6 bg-zinc-800/30 border border-zinc-800 rounded-3xl">
+              <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Technical Specifications</p>
+              {asset.specific_details && Object.keys(asset.specific_details).length > 0 ? (
+                <div className="space-y-4">
+                  {Object.entries(asset.specific_details).map(([key, value]) => (
+                    <div key={key} className="space-y-1">
+                      <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-tight">{key.replace(/_/g, ' ')}</p>
+                      <p className="text-sm text-zinc-200 font-medium">{String(value)}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-600 italic">No specific technical details recorded.</p>
+              )}
             </div>
           </div>
 
@@ -209,6 +168,11 @@ export function AssetDetailModal({ asset, onClose }: AssetDetailModalProps) {
                         </time>
                       </div>
                       <div className="text-zinc-400 text-xs">{event.description}</div>
+                      {event.assigned_to && (
+                        <div className="mt-1 text-[10px] text-zinc-500 italic">
+                          Assigned to: {event.assigned_to}
+                        </div>
+                      )}
                       <div className="mt-2 text-[10px] text-zinc-600 flex items-center gap-1">
                         <Clock size={10} />
                         {formatDistanceToNow(new Date(event.created_at), { addSuffix: true })}

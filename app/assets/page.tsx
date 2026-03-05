@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { AssetTable } from '@/components/AssetTable';
 import { AssetModal } from '@/components/AssetModal';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
+import { AssignAssetModal } from '@/components/AssignAssetModal';
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState<any[]>([]);
@@ -21,25 +22,29 @@ export default function AssetsPage() {
   const [statusFilter, setStatusFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<any>(null);
   const [viewingAsset, setViewingAsset] = useState<any>(null);
+  const [assigningAsset, setAssigningAsset] = useState<any>(null);
 
   const fetchAssets = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('assets').select('*').order('created_at', { ascending: false });
+      // Join with categories and departments
+      let query = supabase
+        .from('assets')
+        .select(`
+          *,
+          categories (id, name),
+          departments (id, name)
+        `)
+        .order('created_at', { ascending: false });
       
       const { data, error } = await query;
       if (error) throw error;
       setAssets(data || []);
     } catch (err) {
       console.error('Error fetching assets:', err);
-      // Mock data for demo if Supabase fails
-      setAssets([
-        { id: '1', asset_name: 'MacBook Pro M2', category: 'Laptop', serial_number: 'SN-2023-001', status: 'In Use', assigned_to: 'John Doe', purchase_date: '2023-01-15' },
-        { id: '2', asset_name: 'Dell UltraSharp 27', category: 'Monitor', serial_number: 'SN-2023-002', status: 'Available', assigned_to: '', purchase_date: '2023-02-10' },
-        { id: '3', asset_name: 'iPhone 14 Pro', category: 'Mobile', serial_number: 'SN-2023-003', status: 'Maintenance', assigned_to: 'Jane Smith', purchase_date: '2023-03-05' },
-      ]);
     } finally {
       setLoading(false);
     }
@@ -86,27 +91,23 @@ export default function AssetsPage() {
       fetchAssets();
     } catch (err) {
       console.error('Error saving asset:', err);
-      // For demo purposes, we'll just update the local state if Supabase fails
-      if (editingAsset) {
-        setAssets(assets.map(a => a.id === editingAsset.id ? { ...a, ...formData } : a));
-      } else {
-        setAssets([{ id: Date.now().toString(), ...formData }, ...assets]);
-      }
+      alert('Error saving asset. Check console for details.');
     }
   };
 
   const handleExportCSV = () => {
     if (filteredAssets.length === 0) return;
 
-    const headers = ['Asset Name', 'Category', 'Serial Number', 'Status', 'Assigned To', 'Purchase Date', 'Notes'];
+    const headers = ['Asset Name', 'Category', 'Serial Number', 'Status', 'Assigned To', 'Department', 'Purchase Date', 'Notes'];
     const csvRows = [
       headers.join(','),
       ...filteredAssets.map(asset => [
         `"${asset.asset_name}"`,
-        `"${asset.category}"`,
+        `"${asset.categories?.name || ''}"`,
         `"${asset.serial_number}"`,
         `"${asset.status}"`,
         `"${asset.assigned_to || ''}"`,
+        `"${asset.departments?.name || ''}"`,
         `"${asset.purchase_date || ''}"`,
         `"${(asset.notes || '').replace(/"/g, '""')}"`
       ].join(','))
@@ -133,7 +134,6 @@ export default function AssetsPage() {
       fetchAssets();
     } catch (err) {
       console.error('Error deleting asset:', err);
-      setAssets(assets.filter(a => a.id !== id));
     }
   };
 
@@ -229,6 +229,10 @@ export default function AssetsPage() {
             setIsDetailModalOpen(true);
           }}
           onDelete={handleDelete}
+          onAssign={(asset) => {
+            setAssigningAsset(asset);
+            setIsAssignModalOpen(true);
+          }}
         />
       )}
 
@@ -240,6 +244,18 @@ export default function AssetsPage() {
             setIsDetailModalOpen(false);
             setViewingAsset(null);
           }}
+        />
+      )}
+
+      {/* Assign Modal */}
+      {isAssignModalOpen && assigningAsset && (
+        <AssignAssetModal 
+          asset={assigningAsset}
+          onClose={() => {
+            setIsAssignModalOpen(false);
+            setAssigningAsset(null);
+          }}
+          onSuccess={fetchAssets}
         />
       )}
 
@@ -257,3 +273,4 @@ export default function AssetsPage() {
     </div>
   );
 }
+

@@ -12,7 +12,9 @@ import {
   Tablet,
   Cpu,
   Globe,
-  HelpCircle
+  HelpCircle,
+  Send,
+  Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,22 +23,21 @@ interface AssetTableProps {
   onEdit: (asset: any) => void;
   onView: (asset: any) => void;
   onDelete: (id: string) => void;
+  onAssign: (asset: any) => void;
 }
 
 const getCategoryIcon = (category: string) => {
-  switch (category.toLowerCase()) {
-    case 'laptop': return Laptop;
-    case 'desktop': return Monitor;
-    case 'mobile': return Smartphone;
-    case 'tablet': return Tablet;
-    case 'peripheral': return Cpu;
-    case 'networking': return Globe;
-    default: return HelpCircle;
-  }
+  const cat = category?.toLowerCase() || '';
+  if (cat.includes('laptop')) return Laptop;
+  if (cat.includes('desktop') || cat.includes('monitor')) return Monitor;
+  if (cat.includes('mobile') || cat.includes('phone')) return Smartphone;
+  if (cat.includes('tablet')) return Tablet;
+  if (cat.includes('networking')) return Globe;
+  return HelpCircle;
 };
 
 const getStatusStyles = (status: string) => {
-  switch (status.toLowerCase()) {
+  switch (status?.toLowerCase()) {
     case 'available': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
     case 'in use': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
     case 'maintenance': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
@@ -46,7 +47,7 @@ const getStatusStyles = (status: string) => {
   }
 };
 
-export function AssetTable({ assets, onEdit, onView, onDelete }: AssetTableProps) {
+export function AssetTable({ assets, onEdit, onView, onDelete, onAssign }: AssetTableProps) {
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
       <div className="overflow-x-auto">
@@ -56,7 +57,7 @@ export function AssetTable({ assets, onEdit, onView, onDelete }: AssetTableProps
               <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Asset Details</th>
               <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Serial Number</th>
               <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Assigned To</th>
+              <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Assignment</th>
               <th className="px-6 py-4 text-xs font-bold text-zinc-500 uppercase tracking-wider text-right">Actions</th>
             </tr>
           </thead>
@@ -73,7 +74,10 @@ export function AssetTable({ assets, onEdit, onView, onDelete }: AssetTableProps
               </tr>
             ) : (
               assets.map((asset) => {
-                const Icon = getCategoryIcon(asset.category);
+                const categoryName = asset.categories?.name || asset.category || 'N/A';
+                const Icon = getCategoryIcon(categoryName);
+                const departmentName = asset.departments?.name || 'N/A';
+                
                 return (
                   <tr key={asset.id} className="hover:bg-zinc-800/30 transition-colors group">
                     <td className="px-6 py-4">
@@ -83,7 +87,7 @@ export function AssetTable({ assets, onEdit, onView, onDelete }: AssetTableProps
                         </div>
                         <div>
                           <p className="text-sm font-bold text-zinc-100">{asset.asset_name}</p>
-                          <p className="text-xs text-zinc-500">{asset.category}</p>
+                          <p className="text-xs text-zinc-500">{categoryName}</p>
                         </div>
                       </div>
                     </td>
@@ -101,13 +105,19 @@ export function AssetTable({ assets, onEdit, onView, onDelete }: AssetTableProps
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-1">
                         {asset.assigned_to ? (
                           <>
-                            <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
-                              {asset.assigned_to.charAt(0)}
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[8px] font-bold text-zinc-400">
+                                {asset.assigned_to.charAt(0)}
+                              </div>
+                              <span className="text-sm text-zinc-300">{asset.assigned_to}</span>
                             </div>
-                            <span className="text-sm text-zinc-300">{asset.assigned_to}</span>
+                            <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                              <Building2 size={10} />
+                              {departmentName}
+                            </div>
                           </>
                         ) : (
                           <span className="text-xs text-zinc-600 italic">Unassigned</span>
@@ -122,6 +132,13 @@ export function AssetTable({ assets, onEdit, onView, onDelete }: AssetTableProps
                           title="View Details"
                         >
                           <Eye size={16} />
+                        </button>
+                        <button 
+                          onClick={() => onAssign(asset)}
+                          className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-blue-400 transition-all"
+                          title="Assign Asset"
+                        >
+                          <Send size={16} />
                         </button>
                         <button 
                           onClick={() => onEdit(asset)}
@@ -149,3 +166,4 @@ export function AssetTable({ assets, onEdit, onView, onDelete }: AssetTableProps
     </div>
   );
 }
+

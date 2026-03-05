@@ -1,61 +1,244 @@
 'use client';
 
-import React from 'react';
-import { Settings as SettingsIcon, Shield, Bell, User, Database, Palette } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Settings as SettingsIcon, 
+  Plus, 
+  Trash2, 
+  Edit2, 
+  Save, 
+  X, 
+  Loader2,
+  Layers,
+  Building2
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export default function SettingsPage() {
-  const sections = [
-    { name: 'General', icon: SettingsIcon, description: 'Basic application settings and preferences.' },
-    { name: 'Account', icon: User, description: 'Manage your profile and account security.' },
-    { name: 'Database', icon: Database, description: 'Supabase connection and synchronization settings.' },
-    { name: 'Notifications', icon: Bell, description: 'Configure email and system alerts.' },
-    { name: 'Security', icon: Shield, description: 'Access control and audit log settings.' },
-    { name: 'Appearance', icon: Palette, description: 'Customize the look and feel of your dashboard.' },
-  ];
+  const [categories, setCategories] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [newCategory, setNewCategory] = useState('');
+  const [newDepartment, setNewDepartment] = useState('');
+  
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [catRes, depRes] = await Promise.all([
+        supabase.from('categories').select('*').order('name'),
+        supabase.from('departments').select('*').order('name')
+      ]);
+      setCategories(catRes.data || []);
+      setDepartments(depRes.data || []);
+    } catch (err) {
+      console.error('Error fetching settings data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleAdd = async (table: 'categories' | 'departments', name: string, setter: (val: string) => void) => {
+    if (!name.trim()) return;
+    try {
+      const { error } = await supabase.from(table).insert([{ name }]);
+      if (error) throw error;
+      setter('');
+      fetchData();
+    } catch (err) {
+      console.error(`Error adding to ${table}:`, err);
+    }
+  };
+
+  const handleDelete = async (table: 'categories' | 'departments', id: string) => {
+    if (!confirm('Are you sure? This might affect existing assets.')) return;
+    try {
+      const { error } = await supabase.from(table).delete().eq('id', id);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error(`Error deleting from ${table}:`, err);
+      alert('Cannot delete: This item might be in use by an asset.');
+    }
+  };
+
+  const handleUpdate = async (table: 'categories' | 'departments') => {
+    if (!editingId || !editValue.trim()) return;
+    try {
+      const { error } = await supabase.from(table).update({ name: editValue }).eq('id', editingId);
+      if (error) throw error;
+      setEditingId(null);
+      setEditValue('');
+      fetchData();
+    } catch (err) {
+      console.error(`Error updating ${table}:`, err);
+    }
+  };
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 pb-20">
       <div>
-        <h1 className="text-4xl font-bold tracking-tight text-zinc-100">Settings</h1>
-        <p className="text-zinc-500 mt-2 text-lg">Configure your asset management environment.</p>
+        <h1 className="text-4xl font-bold tracking-tight text-zinc-100">Master Data Settings</h1>
+        <p className="text-zinc-500 mt-2 text-lg">Manage categories and departments for your asset inventory.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {sections.map((section) => (
-          <div key={section.name} className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl hover:border-zinc-700 transition-all cursor-pointer group">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-zinc-800 rounded-xl text-zinc-400 group-hover:text-emerald-400 transition-colors">
-                <section.icon size={24} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        {/* Categories CRUD */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden flex flex-col shadow-xl">
+          <div className="p-6 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-zinc-800 rounded-lg text-emerald-400">
+                <Layers size={20} />
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-zinc-100">{section.name}</h3>
-                <p className="text-zinc-500 text-sm mt-1">{section.description}</p>
-              </div>
+              <h2 className="text-xl font-bold text-zinc-100">Asset Categories</h2>
             </div>
           </div>
-        ))}
-      </div>
+          
+          <div className="p-6 space-y-6">
+            <div className="flex gap-2">
+              <input 
+                type="text"
+                placeholder="New category name..."
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              />
+              <button 
+                onClick={() => handleAdd('categories', newCategory, setNewCategory)}
+                className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
-        <h2 className="text-xl font-bold text-zinc-100 mb-6">System Information</h2>
-        <div className="space-y-4">
-          <div className="flex justify-between py-3 border-b border-zinc-800">
-            <span className="text-zinc-500">Version</span>
-            <span className="text-zinc-100 font-mono">1.0.0-stable</span>
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+              {loading ? (
+                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-zinc-600" /></div>
+              ) : categories.length === 0 ? (
+                <p className="text-center py-10 text-zinc-600 text-sm italic">No categories defined yet.</p>
+              ) : (
+                categories.map(cat => (
+                  <div key={cat.id} className="flex items-center justify-between p-3 bg-zinc-800/30 border border-zinc-800 rounded-xl group hover:border-zinc-700 transition-all">
+                    {editingId === cat.id ? (
+                      <div className="flex items-center gap-2 flex-1 mr-2">
+                        <input 
+                          autoFocus
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1 text-sm text-zinc-100 focus:outline-none"
+                        />
+                        <button onClick={() => handleUpdate('categories')} className="text-emerald-400 p-1 hover:bg-zinc-800 rounded"><Save size={16} /></button>
+                        <button onClick={() => setEditingId(null)} className="text-zinc-500 p-1 hover:bg-zinc-800 rounded"><X size={16} /></button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-zinc-300 font-medium">{cat.name}</span>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => { setEditingId(cat.id); setEditValue(cat.name); }}
+                            className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-zinc-800 rounded-lg transition-all"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete('categories', cat.id)}
+                            className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition-all"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-          <div className="flex justify-between py-3 border-b border-zinc-800">
-            <span className="text-zinc-500">Database Status</span>
-            <span className="flex items-center gap-2 text-emerald-400">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Connected
-            </span>
+        </div>
+
+        {/* Departments CRUD */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden flex flex-col shadow-xl">
+          <div className="p-6 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-zinc-800 rounded-lg text-blue-400">
+                <Building2 size={20} />
+              </div>
+              <h2 className="text-xl font-bold text-zinc-100">Departments</h2>
+            </div>
           </div>
-          <div className="flex justify-between py-3">
-            <span className="text-zinc-500">Last Sync</span>
-            <span className="text-zinc-300">Today at 14:45 PM</span>
+          
+          <div className="p-6 space-y-6">
+            <div className="flex gap-2">
+              <input 
+                type="text"
+                placeholder="New department name..."
+                value={newDepartment}
+                onChange={(e) => setNewDepartment(e.target.value)}
+                className="flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              />
+              <button 
+                onClick={() => handleAdd('departments', newDepartment, setNewDepartment)}
+                className="p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+              {loading ? (
+                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-zinc-600" /></div>
+              ) : departments.length === 0 ? (
+                <p className="text-center py-10 text-zinc-600 text-sm italic">No departments defined yet.</p>
+              ) : (
+                departments.map(dep => (
+                  <div key={dep.id} className="flex items-center justify-between p-3 bg-zinc-800/30 border border-zinc-800 rounded-xl group hover:border-zinc-700 transition-all">
+                    {editingId === dep.id ? (
+                      <div className="flex items-center gap-2 flex-1 mr-2">
+                        <input 
+                          autoFocus
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          className="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-1 text-sm text-zinc-100 focus:outline-none"
+                        />
+                        <button onClick={() => handleUpdate('departments')} className="text-emerald-400 p-1 hover:bg-zinc-800 rounded"><Save size={16} /></button>
+                        <button onClick={() => setEditingId(null)} className="text-zinc-500 p-1 hover:bg-zinc-800 rounded"><X size={16} /></button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-zinc-300 font-medium">{dep.name}</span>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => { setEditingId(dep.id); setEditValue(dep.name); }}
+                            className="p-1.5 text-zinc-500 hover:text-emerald-400 hover:bg-zinc-800 rounded-lg transition-all"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete('departments', dep.id)}
+                            className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition-all"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
+

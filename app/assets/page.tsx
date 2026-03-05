@@ -48,6 +48,10 @@ export default function AssetsPage() {
 
   const handleSave = async (formData: any) => {
     try {
+      let assetId = editingAsset?.id;
+      let actionType = 'Updated';
+      let description = `Updated details for: ${formData.asset_name}`;
+
       if (editingAsset) {
         const { error } = await supabase
           .from('assets')
@@ -55,11 +59,27 @@ export default function AssetsPage() {
           .eq('id', editingAsset.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        actionType = 'Created';
+        description = `Added new asset: ${formData.asset_name}`;
+        const { data, error } = await supabase
           .from('assets')
-          .insert([formData]);
+          .insert([formData])
+          .select();
         if (error) throw error;
+        if (data && data.length > 0) {
+          assetId = data[0].id;
+        }
       }
+
+      // Record in asset_history
+      if (assetId) {
+        await supabase.from('asset_history').insert([{
+          asset_id: assetId,
+          action_type: actionType,
+          description: description
+        }]);
+      }
+
       fetchAssets();
     } catch (err) {
       console.error('Error saving asset:', err);
@@ -70,6 +90,35 @@ export default function AssetsPage() {
         setAssets([{ id: Date.now().toString(), ...formData }, ...assets]);
       }
     }
+  };
+
+  const handleExportCSV = () => {
+    if (filteredAssets.length === 0) return;
+
+    const headers = ['Asset Name', 'Category', 'Serial Number', 'Status', 'Assigned To', 'Purchase Date', 'Notes'];
+    const csvRows = [
+      headers.join(','),
+      ...filteredAssets.map(asset => [
+        `"${asset.asset_name}"`,
+        `"${asset.category}"`,
+        `"${asset.serial_number}"`,
+        `"${asset.status}"`,
+        `"${asset.assigned_to || ''}"`,
+        `"${asset.purchase_date || ''}"`,
+        `"${(asset.notes || '').replace(/"/g, '""')}"`
+      ].join(','))
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `assets_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleDelete = async (id: string) => {
@@ -150,6 +199,7 @@ export default function AssetsPage() {
             <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
           <button 
+            onClick={handleExportCSV}
             className="p-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-all"
             title="Export to CSV"
           >

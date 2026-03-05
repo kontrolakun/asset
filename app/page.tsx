@@ -1,17 +1,60 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { DashboardCards } from '@/components/DashboardCards';
 import { 
   TrendingUp, 
   Activity, 
   Users, 
   ArrowRight,
-  Plus
+  Plus,
+  Clock,
+  History
 } from 'lucide-react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
+import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
+  const [activities, setActivities] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchActivities() {
+      try {
+        const { data, error } = await supabase
+          .from('asset_history')
+          .select(`
+            id,
+            action_type,
+            description,
+            created_at,
+            assets (
+              asset_name,
+              serial_number
+            )
+          `)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (error) throw error;
+        setActivities(data || []);
+      } catch (err) {
+        console.error('Error fetching activities:', err);
+        // Fallback dummy data
+        setActivities([
+          { id: '1', action_type: 'Created', description: 'Added new asset: MacBook Pro M2', created_at: new Date().toISOString(), assets: { asset_name: 'MacBook Pro M2', serial_number: 'SN-001' } },
+          { id: '2', action_type: 'Updated', description: 'Updated details for: Dell Monitor', created_at: new Date(Date.now() - 3600000).toISOString(), assets: { asset_name: 'Dell Monitor', serial_number: 'SN-002' } },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchActivities();
+  }, []);
+
   return (
     <div className="space-y-10">
       {/* Header Section */}
@@ -36,7 +79,7 @@ export default function DashboardPage() {
 
       {/* Secondary Content Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Activity Placeholder */}
+        {/* Recent Activity */}
         <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
           <div className="p-6 border-b border-zinc-800 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -45,27 +88,47 @@ export default function DashboardPage() {
               </div>
               <h2 className="text-xl font-bold text-zinc-100">Recent Activity</h2>
             </div>
-            <button className="text-sm text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors">
+            <Link href="/assets" className="text-sm text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors">
               View all <ArrowRight size={14} />
-            </button>
+            </Link>
           </div>
-          <div className="p-6 pt-0 space-y-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-4 group cursor-pointer">
-                <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 group-hover:bg-zinc-700 transition-colors">
-                  <Users size={18} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-zinc-200">
-                    <span className="text-emerald-400 font-semibold">John Doe</span> assigned a <span className="text-zinc-100">MacBook Pro M2</span>
-                  </p>
-                  <p className="text-xs text-zinc-500 mt-0.5">2 hours ago • Serial: MacBook-2023-00{i}</p>
-                </div>
-                <div className="text-xs font-medium px-2 py-1 rounded bg-emerald-500/10 text-emerald-400">
-                  Assigned
-                </div>
+          <div className="p-6 pt-0 space-y-6 mt-6">
+            {loading ? (
+              <div className="flex items-center justify-center py-10">
+                <Clock className="animate-spin text-zinc-600" size={24} />
               </div>
-            ))}
+            ) : activities.length === 0 ? (
+              <div className="text-center py-10 text-zinc-500">
+                <History size={40} className="mx-auto mb-2 opacity-20" />
+                <p>No recent activity found.</p>
+              </div>
+            ) : (
+              activities.map((activity) => (
+                <div key={activity.id} className="flex items-center gap-4 group cursor-pointer">
+                  <div className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center text-zinc-400 group-hover:scale-110 transition-transform",
+                    activity.action_type === 'Created' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'
+                  )}>
+                    <Users size={18} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-zinc-200">
+                      {activity.description}
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      {activity.created_at ? formatDistanceToNow(new Date(activity.created_at), { addSuffix: true }) : 'Just now'} 
+                      {activity.assets?.serial_number && ` • Serial: ${activity.assets.serial_number}`}
+                    </p>
+                  </div>
+                  <div className={cn(
+                    "text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded",
+                    activity.action_type === 'Created' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'
+                  )}>
+                    {activity.action_type}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

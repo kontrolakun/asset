@@ -16,7 +16,6 @@ import {
   Globe,
   Printer as PrinterIcon
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 interface AssetFormProps {
   asset?: any;
@@ -24,13 +23,12 @@ interface AssetFormProps {
   onSave: (data: any) => Promise<void>;
 }
 
+const CATEGORIES = ["PC", "Leptop", "Printer / Scanner", "IP Phone", "Mobile Phone", "Projector", "Kamera", "Monitor", "Microphone", "CCTV", "Switch Device", "Lain-Lainnya"];
+
 export function AssetModal({ asset, onClose, onSave }: AssetFormProps) {
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
-  
   const [formData, setFormData] = useState({
     asset_name: asset?.asset_name || '',
-    category_id: asset?.category_id || '',
+    category: asset?.category || CATEGORIES[0],
     serial_number: asset?.serial_number || '',
     status: asset?.status || 'Available',
     purchase_date: asset?.purchase_date || '',
@@ -39,24 +37,6 @@ export function AssetModal({ asset, onClose, onSave }: AssetFormProps) {
   });
   
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const { data, error } = await supabase.from('categories').select('*').order('name');
-        if (error) throw error;
-        setCategories(data || []);
-        if (data && data.length > 0 && !formData.category_id) {
-          setFormData(prev => ({ ...prev, category_id: data[0].id }));
-        }
-      } catch (err) {
-        console.error('Error fetching categories:', err);
-      } finally {
-        setLoadingCategories(false);
-      }
-    }
-    fetchCategories();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,12 +61,10 @@ export function AssetModal({ asset, onClose, onSave }: AssetFormProps) {
     }));
   };
 
-  const selectedCategoryName = categories.find(c => c.id === formData.category_id)?.name || '';
-
   const renderDynamicFields = () => {
-    const name = selectedCategoryName.toLowerCase();
+    const cat = formData.category;
     
-    if (name.includes('laptop')) {
+    if (cat === 'PC' || cat === 'Leptop') {
       return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-zinc-800/30 rounded-2xl border border-zinc-800">
           <DynamicField label="Processor" icon={Cpu} value={formData.specific_details.processor || ''} onChange={(v) => handleSpecificDetailChange('processor', v)} />
@@ -96,42 +74,18 @@ export function AssetModal({ asset, onClose, onSave }: AssetFormProps) {
       );
     }
     
-    if (name.includes('monitor')) {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-zinc-800/30 rounded-2xl border border-zinc-800">
-          <DynamicField label="Screen Size" icon={MonitorIcon} value={formData.specific_details.screen_size || ''} onChange={(v) => handleSpecificDetailChange('screen_size', v)} />
-          <DynamicField label="Resolution" icon={Info} value={formData.specific_details.resolution || ''} onChange={(v) => handleSpecificDetailChange('resolution', v)} />
-        </div>
-      );
-    }
-    
-    if (name.includes('networking')) {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-zinc-800/30 rounded-2xl border border-zinc-800">
-          <DynamicField label="IP Address" icon={Globe} value={formData.specific_details.ip_address || ''} onChange={(v) => handleSpecificDetailChange('ip_address', v)} />
-          <DynamicField label="MAC Address" icon={Hash} value={formData.specific_details.mac_address || ''} onChange={(v) => handleSpecificDetailChange('mac_address', v)} />
-        </div>
-      );
-    }
-    
-    if (name.includes('printer')) {
+    if (cat === 'Printer / Scanner') {
       return (
         <div className="grid grid-cols-1 p-4 bg-zinc-800/30 rounded-2xl border border-zinc-800">
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
-              <PrinterIcon size={12} /> Printer Type
-            </label>
-            <select
-              value={formData.specific_details.printer_type || ''}
-              onChange={(e) => handleSpecificDetailChange('printer_type', e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-            >
-              <option value="">Select Type</option>
-              <option value="Inkjet">Inkjet</option>
-              <option value="Laser">Laser</option>
-              <option value="Dot Matrix">Dot Matrix</option>
-            </select>
-          </div>
+          <DynamicField label="Tipe Tinta" icon={Info} value={formData.specific_details.ink_type || ''} onChange={(v) => handleSpecificDetailChange('ink_type', v)} />
+        </div>
+      );
+    }
+    
+    if (cat === 'Switch Device') {
+      return (
+        <div className="grid grid-cols-1 p-4 bg-zinc-800/30 rounded-2xl border border-zinc-800">
+          <DynamicField label="IP Address" icon={Globe} value={formData.specific_details.ip_address || ''} onChange={(v) => handleSpecificDetailChange('ip_address', v)} />
         </div>
       );
     }
@@ -183,15 +137,11 @@ export function AssetModal({ asset, onClose, onSave }: AssetFormProps) {
               </label>
               <select
                 required
-                value={formData.category_id}
-                onChange={(e) => setFormData({ ...formData, category_id: e.target.value, specific_details: {} })}
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value, specific_details: {} })}
                 className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all appearance-none"
               >
-                {loadingCategories ? (
-                  <option>Loading...</option>
-                ) : (
-                  categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)
-                )}
+                {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
 

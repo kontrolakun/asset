@@ -30,12 +30,11 @@ export default function AssetsPage() {
   const fetchAssets = async () => {
     setLoading(true);
     try {
-      // Join with categories and departments
+      // Join with departments (categories is now a text field)
       let query = supabase
         .from('assets')
         .select(`
           *,
-          categories (id, name),
           departments (id, name)
         `)
         .order('created_at', { ascending: false });
@@ -103,7 +102,7 @@ export default function AssetsPage() {
       headers.join(','),
       ...filteredAssets.map(asset => [
         `"${asset.asset_name}"`,
-        `"${asset.categories?.name || ''}"`,
+        `"${asset.category || ''}"`,
         `"${asset.serial_number}"`,
         `"${asset.status}"`,
         `"${asset.assigned_to || ''}"`,

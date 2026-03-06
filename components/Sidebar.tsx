@@ -8,13 +8,15 @@ import {
   Database, 
   Settings, 
   Package,
-  ChevronRight
+  ChevronRight,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const menuItems = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Data Assets', href: '/assets', icon: Database },
+  { name: 'AI Assistant', href: '/ai-assistant', icon: Sparkles },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

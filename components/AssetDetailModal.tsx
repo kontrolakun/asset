@@ -78,7 +78,7 @@ export function AssetDetailModal({ asset, onClose }: AssetDetailModalProps) {
             <div className="lg:col-span-2 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InfoItem icon={Tag} label="Asset Name" value={asset.asset_name} />
-                <InfoItem icon={Layers} label="Category" value={asset.categories?.name || asset.category || 'N/A'} />
+                <InfoItem icon={Layers} label="Category" value={asset.category || 'N/A'} />
                 <InfoItem icon={Hash} label="Serial Number" value={asset.serial_number} isMono />
                 <InfoItem icon={User} label="Assigned To" value={asset.assigned_to || 'Unassigned'} />
                 <InfoItem icon={Building2} label="Department" value={asset.departments?.name || 'N/A'} />

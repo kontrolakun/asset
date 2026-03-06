@@ -74,7 +74,7 @@ export function AssetTable({ assets, onEdit, onView, onDelete, onAssign }: Asset
               </tr>
             ) : (
               assets.map((asset) => {
-                const categoryName = asset.categories?.name || asset.category || 'N/A';
+                const categoryName = asset.category || 'N/A';
                 const Icon = getCategoryIcon(categoryName);
                 const departmentName = asset.departments?.name || 'N/A';
                 

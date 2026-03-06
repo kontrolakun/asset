@@ -35,8 +35,13 @@ export function AssignAssetModal({ asset, onClose, onSuccess }: AssignAssetModal
         const { data, error } = await supabase.from('departments').select('*').order('name');
         if (error) throw error;
         setDepartments(data || []);
-        if (data && data.length > 0 && !formData.department_id) {
-          setFormData(prev => ({ ...prev, department_id: data[0].id }));
+        if (data && data.length > 0) {
+          setFormData(prev => {
+            if (!prev.department_id) {
+              return { ...prev, department_id: data[0].id };
+            }
+            return prev;
+          });
         }
       } catch (err) {
         console.error('Error fetching departments:', err);
